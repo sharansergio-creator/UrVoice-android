@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.urvoice.app.network.FetchBusinessContextRequest
+import com.urvoice.app.network.UrVoiceApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +18,13 @@ data class BusinessHours(
     val openTime: String = "09:00",
     val closeTime: String = "18:00"
 )
+
+sealed class FetchState {
+    object Idle    : FetchState()
+    object Loading : FetchState()
+    object Success : FetchState()
+    data class Error(val message: String) : FetchState()
+}
 
 val DAYS_OF_WEEK = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 val BUSINESS_TYPES = listOf("Restaurant", "Hotel", "Salon", "Clinic", "Shop", "Other")
@@ -59,6 +68,9 @@ class BusinessSetupViewModel : ViewModel() {
 
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
+
+    private val _fetchState = MutableStateFlow<FetchState>(FetchState.Idle)
+    val fetchState: StateFlow<FetchState> = _fetchState.asStateFlow()
 
     private val _completionProgress = MutableStateFlow(0f)
     val completionProgress: StateFlow<Float> = _completionProgress.asStateFlow()
@@ -120,6 +132,38 @@ class BusinessSetupViewModel : ViewModel() {
 
     // ──────────────────────────── Firestore ops ─────────────────────────────
 
+    /** Reads all fields from Firestore into the form state. Can be called from a coroutine. */
+    private suspend fun loadFromFirestore(uid: String) {
+        val doc = db.collection("business_context").document(uid).get().await()
+        if (doc.exists()) {
+            doc.getString("businessName")?.let { businessName.value = it }
+            doc.getString("businessType")?.let { businessType.value = it }
+            doc.getString("phoneNumber")?.let { phoneNumber.value = it }
+            doc.getString("googleBusinessUrl")?.let { googleBusinessUrl.value = it }
+            doc.getString("websiteUrl")?.let { websiteUrl.value = it }
+
+            @Suppress("UNCHECKED_CAST")
+            val hoursData = doc.get("businessHours") as? List<Map<String, Any>>
+            if (!hoursData.isNullOrEmpty()) {
+                businessHours.value = hoursData.map { map ->
+                    BusinessHours(
+                        day       = map["day"]       as? String  ?: "",
+                        enabled   = map["enabled"]   as? Boolean ?: false,
+                        openTime  = map["openTime"]  as? String  ?: "09:00",
+                        closeTime = map["closeTime"] as? String  ?: "18:00"
+                    )
+                }
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val qa = doc.get("qaAnswers") as? Map<String, String>
+            if (qa != null) {
+                qaAnswers.value = defaultQaAnswers().toMutableMap().also { it.putAll(qa) }
+            }
+        }
+        _completionProgress.value = computeProgress()
+    }
+
     private fun loadExistingData() {
         val uid = auth.currentUser?.uid ?: run {
             _completionProgress.value = computeProgress()
@@ -128,40 +172,37 @@ class BusinessSetupViewModel : ViewModel() {
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                val doc = db.collection("business_context").document(uid).get().await()
-                if (doc.exists()) {
-                    doc.getString("businessName")?.let { businessName.value = it }
-                    doc.getString("businessType")?.let { businessType.value = it }
-                    doc.getString("phoneNumber")?.let { phoneNumber.value = it }
-                    doc.getString("googleBusinessUrl")?.let { googleBusinessUrl.value = it }
-                    doc.getString("websiteUrl")?.let { websiteUrl.value = it }
-
-                    @Suppress("UNCHECKED_CAST")
-                    val hoursData = doc.get("businessHours") as? List<Map<String, Any>>
-                    if (!hoursData.isNullOrEmpty()) {
-                        businessHours.value = hoursData.map { map ->
-                            BusinessHours(
-                                day = map["day"] as? String ?: "",
-                                enabled = map["enabled"] as? Boolean ?: false,
-                                openTime = map["openTime"] as? String ?: "09:00",
-                                closeTime = map["closeTime"] as? String ?: "18:00"
-                            )
-                        }
-                    }
-
-                    @Suppress("UNCHECKED_CAST")
-                    val qa = doc.get("qaAnswers") as? Map<String, String>
-                    if (qa != null) {
-                        qaAnswers.value = defaultQaAnswers().toMutableMap().also { it.putAll(qa) }
-                    }
-                }
-                _completionProgress.value = computeProgress()
+                loadFromFirestore(uid)
             } catch (e: Exception) {
                 _error.value = "Failed to load data: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun fetchFromWeb(gbpUrl: String, websiteUrl: String) {
+        val uid = auth.currentUser?.uid ?: return
+        _fetchState.value = FetchState.Loading
+        viewModelScope.launch {
+            try {
+                val response = UrVoiceApi.service.fetchBusinessContext(
+                    FetchBusinessContextRequest(gbpUrl, websiteUrl, uid)
+                )
+                if (response.isSuccessful) {
+                    loadFromFirestore(uid)
+                    _fetchState.value = FetchState.Success
+                } else {
+                    _fetchState.value = FetchState.Error("Server error ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _fetchState.value = FetchState.Error(e.message ?: "Request failed")
+            }
+        }
+    }
+
+    fun resetFetchState() {
+        _fetchState.value = FetchState.Idle
     }
 
     fun save() {

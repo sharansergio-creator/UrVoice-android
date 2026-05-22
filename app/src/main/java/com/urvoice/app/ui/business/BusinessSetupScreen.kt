@@ -106,6 +106,7 @@ fun BusinessSetupScreen(
     val error by viewModel.error.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
     val completionProgress by viewModel.completionProgress.collectAsState()
+    val fetchState by viewModel.fetchState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -118,6 +119,20 @@ fun BusinessSetupScreen(
                 snackbarHostState.showSnackbar("Business profile updated successfully")
             }
             onNavigateToDashboard()
+        }
+    }
+
+    LaunchedEffect(fetchState) {
+        when (fetchState) {
+            is FetchState.Success -> {
+                snackbarHostState.showSnackbar("Business details fetched successfully! Review and save.")
+                viewModel.resetFetchState()
+            }
+            is FetchState.Error -> {
+                snackbarHostState.showSnackbar("Could not fetch details. Please fill in manually.")
+                viewModel.resetFetchState()
+            }
+            else -> Unit
         }
     }
 
@@ -356,6 +371,33 @@ fun BusinessSetupScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors()
             )
+
+            Spacer(Modifier.height(14.dp))
+
+            val isFetching = fetchState is FetchState.Loading
+            val canFetch = !isFetching && (googleBusinessUrl.isNotBlank() || websiteUrl.isNotBlank())
+            Button(
+                onClick = { viewModel.fetchFromWeb(googleBusinessUrl, websiteUrl) },
+                enabled = canFetch,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF6C63FF),
+                    disabledContainerColor = Color(0xFF6C63FF).copy(alpha = 0.35f)
+                )
+            ) {
+                if (isFetching) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Fetching…", color = Color.White, fontSize = 14.sp)
+                } else {
+                    Text("✨ Auto-fetch Business Details", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
 
         Spacer(Modifier.height(16.dp))
