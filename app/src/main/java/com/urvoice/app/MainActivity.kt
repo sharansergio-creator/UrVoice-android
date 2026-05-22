@@ -19,10 +19,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.urvoice.app.ui.business.BusinessSetupScreen
 import com.urvoice.app.ui.dashboard.DashboardScreen
 import com.urvoice.app.ui.onboarding.OnboardingScreen
+import com.urvoice.app.ui.settings.CallHandlingScreen
 import com.urvoice.app.ui.settings.SettingsScreen
 import kotlinx.coroutines.tasks.await
 
-enum class Screen { ONBOARDING, BUSINESS_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT }
+enum class Screen { ONBOARDING, BUSINESS_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT, CALL_HANDLING }
 
 class MainActivity : ComponentActivity() {
 
@@ -62,7 +63,12 @@ class MainActivity : ComponentActivity() {
                     Screen.SETTINGS -> SettingsScreen(
                         onBack = { screen = Screen.DASHBOARD },
                         onEditProfile = { screen = Screen.BUSINESS_EDIT },
+                        onCallHandling = { screen = Screen.CALL_HANDLING },
                         onSignOut = { screen = Screen.ONBOARDING }
+                    )
+
+                    Screen.CALL_HANDLING -> CallHandlingScreen(
+                        onBack = { screen = Screen.SETTINGS }
                     )
 
                     Screen.BUSINESS_EDIT -> BusinessSetupScreen(

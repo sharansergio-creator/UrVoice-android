@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,6 +58,7 @@ private val ErrorColor   = Color(0xFFFF5252)
 fun SettingsScreen(
     onBack: () -> Unit,
     onEditProfile: () -> Unit,
+    onCallHandling: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -123,6 +125,18 @@ fun SettingsScreen(
             title      = "Edit Business Profile",
             subtitle   = "Update name, hours, services and more",
             onClick    = onEditProfile
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Call handling section ────────────────────────────────────────────
+        SettingsSectionHeader("Call Handling")
+        SettingsItem(
+            icon     = Icons.Default.Phone,
+            iconTint = Accent,
+            title    = "Call Handling",
+            subtitle = "Configure when and how UrVoice answers calls",
+            onClick  = onCallHandling
         )
 
         Spacer(Modifier.height(16.dp))
