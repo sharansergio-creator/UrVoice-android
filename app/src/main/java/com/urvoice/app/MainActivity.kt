@@ -1,5 +1,8 @@
 package com.urvoice.app
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,6 +32,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannels()
         enableEdgeToEdge()
         setContent {
             UrVoiceTheme {
@@ -112,6 +116,26 @@ private suspend fun resolveScreenForUser(uid: String): Screen {
     } catch (e: Exception) {
         // On error fall back to business setup so the user can still proceed
         Screen.BUSINESS_SETUP
+    }
+}
+
+private fun MainActivity.createNotificationChannels() {
+    val nm = getSystemService(NotificationManager::class.java)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        nm.createNotificationChannel(
+            NotificationChannel(
+                "urvoice_calls",
+                "Incoming Calls",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply { description = "UrVoice call notifications" }
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(
+                "urvoice_updates",
+                "Call Updates",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+        )
     }
 }
 
