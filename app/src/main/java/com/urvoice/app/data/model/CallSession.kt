@@ -29,6 +29,9 @@ data class CallSession(
     @PropertyName("callerNumber")
     val callerNumber: String? = null,
 
+    @PropertyName("callerName")
+    val callerName: String? = null,
+
     @PropertyName("startTime")
     val startTime: Date? = null,
 
@@ -44,5 +47,5 @@ data class CallSession(
     @PropertyName("exchanges")
     val exchanges: List<Exchange> = emptyList()
 ) {
-    constructor() : this(null, null, null, null, null, null, null, emptyList())
+    constructor() : this(null, null, null, null, null, null, null, null, emptyList())
 }

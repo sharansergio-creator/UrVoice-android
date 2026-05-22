@@ -74,6 +74,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.urvoice.app.data.model.CallSession
 import com.urvoice.app.data.model.Exchange
+import com.urvoice.app.ui.contacts.ContactsContent
+import com.urvoice.app.ui.contacts.ContactsTopBar
+import com.urvoice.app.ui.contacts.ContactsViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -91,7 +94,8 @@ private val TextSecondary = Color(0xFF888888)
 fun DashboardScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToContacts: () -> Unit = {},
-    viewModel: DashboardViewModel = viewModel()
+    viewModel: DashboardViewModel = viewModel(),
+    contactsViewModel: ContactsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
@@ -116,46 +120,53 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            DashboardTopBar(onSettingsClick = onNavigateToSettings)
+            when (selectedTab) {
+                1 -> ContactsTopBar()
+                else -> DashboardTopBar(onSettingsClick = onNavigateToSettings)
+            }
         },
         bottomBar = {
             DashboardBottomNav(
                 selectedTab = selectedTab,
                 onTabSelected = { tab ->
                     selectedTab = tab
-                    when (tab) {
-                        1 -> onNavigateToContacts()
-                        2 -> onNavigateToSettings()
-                    }
+                    if (tab == 2) onNavigateToSettings()
                 }
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showTestCallSheet = true },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = null
-                    )
-                },
-                text = { Text("Test Call", fontWeight = FontWeight.SemiBold) },
-                containerColor = AccentColor,
-                contentColor = Color.White
-            )
+            if (selectedTab == 0) {
+                ExtendedFloatingActionButton(
+                    onClick = { showTestCallSheet = true },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = null
+                        )
+                    },
+                    text = { Text("Test Call", fontWeight = FontWeight.SemiBold) },
+                    containerColor = AccentColor,
+                    contentColor = Color.White
+                )
+            }
         },
         containerColor = BackgroundColor
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = {
-                isRefreshing = true
-                viewModel.refresh()
-            },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        when (selectedTab) {
+            1 -> ContactsContent(
+                paddingValues = paddingValues,
+                viewModel     = contactsViewModel
+            )
+            else -> PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    viewModel.refresh()
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
             when {
                 uiState.isLoading && uiState.sessions.isEmpty() -> {
                     Box(
@@ -207,6 +218,7 @@ fun DashboardScreen(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -362,6 +374,11 @@ private fun RecentCallsHeader() {
 @Composable
 private fun CallSessionItem(session: CallSession, onClick: () -> Unit) {
     val firstTranscript = session.exchanges.firstOrNull()?.transcript
+    val displayName = when {
+        !session.callerName.isNullOrBlank() -> session.callerName!!
+        !session.callerNumber.isNullOrBlank() && !session.callerNumber.equals("unknown", ignoreCase = true) -> session.callerNumber!!
+        else -> "Unknown Caller"
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -388,7 +405,7 @@ private fun CallSessionItem(session: CallSession, onClick: () -> Unit) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = formatCallerNumber(session.callerNumber),
+                text = displayName,
                 color = Color.White,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
@@ -746,12 +763,25 @@ private fun CallSessionDetailSheet(session: CallSession, onDismiss: () -> Unit) 
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
+                    val hasName = !session.callerName.isNullOrBlank()
+                    val titleText = when {
+                        hasName -> session.callerName!!
+                        !session.callerNumber.isNullOrBlank() && !session.callerNumber.equals("unknown", ignoreCase = true) -> session.callerNumber!!
+                        else -> "Unknown Caller"
+                    }
                     Text(
-                        text = formatCallerNumber(session.callerNumber),
+                        text = titleText,
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
+                    if (hasName && !session.callerNumber.isNullOrBlank() && !session.callerNumber.equals("unknown", ignoreCase = true)) {
+                        Text(
+                            text = session.callerNumber!!,
+                            color = TextSecondary,
+                            fontSize = 13.sp
+                        )
+                    }
                     Text(
                         text = formatFullTimestamp(session.startTime),
                         color = TextSecondary,

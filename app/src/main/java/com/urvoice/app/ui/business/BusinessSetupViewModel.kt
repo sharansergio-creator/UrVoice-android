@@ -45,8 +45,10 @@ private fun defaultQaAnswers(): Map<String, String> = QA_QUESTIONS.associateWith
 
 class BusinessSetupViewModel : ViewModel() {
 
-    private val db = FirebaseFirestore.getInstance()
+    private val db   = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+
+    companion object { private const val TAG = "UrVoice/SetupVM" }
 
     // Form state — exposed as MutableStateFlow so the Screen collects them directly
     val businessName = MutableStateFlow("")
@@ -55,6 +57,10 @@ class BusinessSetupViewModel : ViewModel() {
     val businessHours = MutableStateFlow(defaultHours())
     val googleBusinessUrl = MutableStateFlow("")
     val websiteUrl = MutableStateFlow("")
+    val about = MutableStateFlow("")
+    val services = MutableStateFlow("")
+    val pricing = MutableStateFlow("")
+    val address = MutableStateFlow("")
     val qaAnswers = MutableStateFlow(defaultQaAnswers())
 
     private val _isLoading = MutableStateFlow(false)
@@ -125,6 +131,11 @@ class BusinessSetupViewModel : ViewModel() {
         _completionProgress.value = computeProgress()
     }
 
+    fun onAboutChange(value: String)    { about.value    = value }
+    fun onServicesChange(value: String) { services.value = value }
+    fun onPricingChange(value: String)  { pricing.value  = value }
+    fun onAddressChange(value: String)  { address.value  = value }
+
     fun onQaAnswerChange(question: String, answer: String) {
         qaAnswers.value = qaAnswers.value.toMutableMap().also { it[question] = answer }
         _completionProgress.value = computeProgress()
@@ -138,9 +149,16 @@ class BusinessSetupViewModel : ViewModel() {
         if (doc.exists()) {
             doc.getString("businessName")?.let { businessName.value = it }
             doc.getString("businessType")?.let { businessType.value = it }
-            doc.getString("phoneNumber")?.let { phoneNumber.value = it }
+            // support both "phoneNumber" (saved by app) and "phone" (saved by auto-fetch)
+            (doc.getString("phoneNumber") ?: doc.getString("phone"))
+                ?.let { phoneNumber.value = it }
             doc.getString("googleBusinessUrl")?.let { googleBusinessUrl.value = it }
             doc.getString("websiteUrl")?.let { websiteUrl.value = it }
+            doc.getString("about")?.let { about.value = it }
+            doc.getString("services")?.let { services.value = it }
+            doc.getString("pricing")?.let { pricing.value = it }
+            // backend saves as "address", build_system_prompt reads "location"
+            (doc.getString("address") ?: doc.getString("location"))?.let { address.value = it }
 
             @Suppress("UNCHECKED_CAST")
             val hoursData = doc.get("businessHours") as? List<Map<String, Any>>
@@ -169,6 +187,7 @@ class BusinessSetupViewModel : ViewModel() {
             _completionProgress.value = computeProgress()
             return
         }
+        _saveSuccess.value = false   // reset stale success state from any previous save
         _isLoading.value = true
         viewModelScope.launch {
             try {
@@ -182,7 +201,11 @@ class BusinessSetupViewModel : ViewModel() {
     }
 
     fun fetchFromWeb(gbpUrl: String, websiteUrl: String) {
-        val uid = auth.currentUser?.uid ?: return
+        val uid = auth.currentUser?.uid ?: run {
+            android.util.Log.e(TAG, "fetchFromWeb: user not signed in")
+            return
+        }
+        android.util.Log.d(TAG, "fetchFromWeb: uid=$uid gbpUrl=$gbpUrl websiteUrl=$websiteUrl")
         _fetchState.value = FetchState.Loading
         viewModelScope.launch {
             try {
@@ -190,12 +213,16 @@ class BusinessSetupViewModel : ViewModel() {
                     FetchBusinessContextRequest(gbpUrl, websiteUrl, uid)
                 )
                 if (response.isSuccessful) {
+                    android.util.Log.d(TAG, "fetchFromWeb: success (${response.code()})")
                     loadFromFirestore(uid)
                     _fetchState.value = FetchState.Success
                 } else {
+                    val body = response.errorBody()?.string() ?: "(no body)"
+                    android.util.Log.e(TAG, "fetchFromWeb: HTTP ${response.code()} — $body")
                     _fetchState.value = FetchState.Error("Server error ${response.code()}")
                 }
             } catch (e: Exception) {
+                android.util.Log.e(TAG, "fetchFromWeb: exception", e)
                 _fetchState.value = FetchState.Error(e.message ?: "Request failed")
             }
         }
@@ -203,6 +230,10 @@ class BusinessSetupViewModel : ViewModel() {
 
     fun resetFetchState() {
         _fetchState.value = FetchState.Idle
+    }
+
+    fun resetSaveSuccess() {
+        _saveSuccess.value = false
     }
 
     fun save() {
@@ -233,6 +264,11 @@ class BusinessSetupViewModel : ViewModel() {
                     },
                     "googleBusinessUrl" to googleBusinessUrl.value,
                     "websiteUrl" to websiteUrl.value,
+                    "about" to about.value,
+                    "services" to services.value,
+                    "pricing" to pricing.value,
+                    "address" to address.value,
+                    "location" to address.value,
                     "qaAnswers" to qaAnswers.value,
                     "userId" to uid
                 )

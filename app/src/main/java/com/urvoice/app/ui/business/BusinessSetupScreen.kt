@@ -100,6 +100,10 @@ fun BusinessSetupScreen(
     val businessHours by viewModel.businessHours.collectAsState()
     val googleBusinessUrl by viewModel.googleBusinessUrl.collectAsState()
     val websiteUrl by viewModel.websiteUrl.collectAsState()
+    val about by viewModel.about.collectAsState()
+    val services by viewModel.services.collectAsState()
+    val pricing by viewModel.pricing.collectAsState()
+    val address by viewModel.address.collectAsState()
     val qaAnswers by viewModel.qaAnswers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
@@ -115,21 +119,20 @@ fun BusinessSetupScreen(
 
     LaunchedEffect(saveSuccess) {
         if (saveSuccess) {
-            if (isEditMode) {
-                snackbarHostState.showSnackbar("Business profile updated successfully")
-            }
-            onNavigateToDashboard()
+            viewModel.resetSaveSuccess()  // clear immediately so re-entry doesn't re-navigate
+            onNavigateToDashboard()       // navigate immediately — no snackbar delay
         }
     }
 
     LaunchedEffect(fetchState) {
         when (fetchState) {
             is FetchState.Success -> {
-                snackbarHostState.showSnackbar("Business details fetched successfully! Review and save.")
+                snackbarHostState.showSnackbar("Business details fetched! Review and save.")
                 viewModel.resetFetchState()
             }
             is FetchState.Error -> {
-                snackbarHostState.showSnackbar("Could not fetch details. Please fill in manually.")
+                val msg = (fetchState as FetchState.Error).message
+                snackbarHostState.showSnackbar("Fetch failed: $msg")
                 viewModel.resetFetchState()
             }
             else -> Unit
@@ -402,7 +405,63 @@ fun BusinessSetupScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // ── Section 4 — Custom Q&A ───────────────────────────────────────────
+        // ── Section 4 — About & Services ────────────────────────────────────
+        SectionCard(title = "About & Services") {
+            Text(
+                text = "Fetched automatically or fill manually — the AI uses these for calls",
+                color = TextSecondary,
+                fontSize = 13.sp
+            )
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = address,
+                onValueChange = viewModel::onAddressChange,
+                label = { Text("Address / Location") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = fieldColors()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = about,
+                onValueChange = viewModel::onAboutChange,
+                label = { Text("About the business") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 6,
+                colors = fieldColors()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = services,
+                onValueChange = viewModel::onServicesChange,
+                label = { Text("Services / Amenities") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+                maxLines = 5,
+                colors = fieldColors()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = pricing,
+                onValueChange = viewModel::onPricingChange,
+                label = { Text("Pricing info (optional)") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+                maxLines = 4,
+                colors = fieldColors()
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Section 5 — Custom Q&A ───────────────────────────────────────────
         SectionCard(title = "Custom Q&A") {
             Text(
                 text = "Help the AI answer common questions about your business",
