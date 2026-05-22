@@ -2,6 +2,7 @@ package com.urvoice.app.ui.dashboard
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -9,6 +10,8 @@ import com.urvoice.app.data.model.CallSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 
 data class DashboardStats(
@@ -21,7 +24,8 @@ data class DashboardUiState(
     val sessions: List<CallSession> = emptyList(),
     val stats: DashboardStats = DashboardStats(),
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val businessName: String = ""
 )
 
 class DashboardViewModel : ViewModel() {
@@ -36,6 +40,22 @@ class DashboardViewModel : ViewModel() {
 
     init {
         attachRealtimeListener()
+        fetchBusinessName()
+    }
+
+    private fun fetchBusinessName() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                val doc = db.collection("business_context").document(uid).get().await()
+                val name = doc.getString("businessName").orEmpty()
+                if (name.isNotBlank()) {
+                    _uiState.value = _uiState.value.copy(businessName = name)
+                }
+            } catch (e: Exception) {
+                Log.e("UrVoice", "fetchBusinessName error: ${e.message}")
+            }
+        }
     }
 
     fun refresh() {

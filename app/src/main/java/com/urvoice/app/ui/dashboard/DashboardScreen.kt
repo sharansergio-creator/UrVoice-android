@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
@@ -56,12 +57,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.urvoice.app.data.model.CallSession
 import com.urvoice.app.data.model.Exchange
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -93,6 +97,7 @@ fun DashboardScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     var selectedSession by remember { mutableStateOf<CallSession?>(null) }
+    var showTestCallSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isLoading) {
         if (!uiState.isLoading) isRefreshing = false
@@ -100,6 +105,13 @@ fun DashboardScreen(
 
     selectedSession?.let { session ->
         CallSessionDetailSheet(session = session, onDismiss = { selectedSession = null })
+    }
+
+    if (showTestCallSheet) {
+        TestCallSheet(
+            businessName = uiState.businessName.ifBlank { "your business" },
+            onDismiss = { showTestCallSheet = false }
+        )
     }
 
     Scaffold(
@@ -120,7 +132,7 @@ fun DashboardScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = {},
+                onClick = { showTestCallSheet = true },
                 icon = {
                     Icon(
                         imageVector = Icons.Default.Mic,
@@ -541,6 +553,157 @@ private fun formatDuration(seconds: Long): String {
     val m = seconds / 60
     val s = seconds % 60
     return if (m > 0) "${m}m ${s}s" else "${s}s"
+}
+
+// ── Test Call Bottom Sheet ───────────────────────────────────────────────
+
+private const val TWILIO_NUMBER_DISPLAY = "+1 620 659 6566"
+private const val TWILIO_NUMBER_DIAL    = "tel:+16206596566"
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TestCallSheet(businessName: String, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context    = LocalContext.current
+    val scope      = rememberCoroutineScope()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState,
+        containerColor   = SurfaceColor,
+        tonalElevation   = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 36.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // ── Icon ─────────────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(AccentColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = AccentColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = "Test Your UrVoice Assistant",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Call this number to test how your AI assistant handles customer calls",
+                color = TextSecondary,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // ── Number display ────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1E1E2E))
+                    .padding(vertical = 20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = TWILIO_NUMBER_DISPLAY,
+                    color = AccentLight,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // ── Call Now button ───────────────────────────────────────────
+            Button(
+                onClick = {
+                    val intent = android.content.Intent(
+                        android.content.Intent.ACTION_DIAL,
+                        android.net.Uri.parse(TWILIO_NUMBER_DIAL)
+                    )
+                    context.startActivity(intent)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Call,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Call Now", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // ── Copy Number button ────────────────────────────────────────
+            OutlinedButton(
+                onClick = {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                            as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(
+                        android.content.ClipData.newPlainText("UrVoice Number", TWILIO_NUMBER_DISPLAY)
+                    )
+                    android.widget.Toast.makeText(context, "Number copied", android.widget.Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape  = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFF444444)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Copy Number", color = TextSecondary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // ── Note ──────────────────────────────────────────────────────
+            Text(
+                text = "Your AI will answer as $businessName and log the call to your dashboard",
+                color = TextSecondary,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
+            )
+        }
+    }
 }
 
 // ── Detail Bottom Sheet ──────────────────────────────────────────────────
