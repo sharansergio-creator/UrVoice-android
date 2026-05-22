@@ -12,35 +12,39 @@ import java.util.Date
 data class CallLog(
     @DocumentId
     val callId: String? = null,
-    
-    @PropertyName("caller_id")
+
+    @PropertyName("userId")
+    val userId: String? = null,
+
+    @PropertyName("callerId")
     val callerId: String? = null,
-    
-    @PropertyName("caller_number")
+
+    @PropertyName("callerNumber")
     val callerNumber: String? = null,
-    
+
     @PropertyName("transcript")
     val transcript: String? = null,
-    
-    @PropertyName("ai_response")
+
+    @PropertyName("aiResponse")
     val aiResponse: String? = null,
-    
+
     @PropertyName("language")
     val language: String? = null,
-    
+
     @PropertyName("duration")
     val duration: Long? = null, // in seconds
-    
+
     @PropertyName("timestamp")
     @ServerTimestamp
     val timestamp: Date? = null,
-    
+
     @PropertyName("category")
     val category: CallCategory? = CallCategory.UNKNOWN
 ) {
     // No-argument constructor required for Firestore deserialization
     constructor() : this(
         callId = null,
+        userId = null,
         callerId = null,
         callerNumber = null,
         transcript = null,

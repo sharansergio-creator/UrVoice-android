@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,10 @@ class OnboardingViewModel : ViewModel() {
     
     private val _uiState = MutableStateFlow<OnboardingUiState>(OnboardingUiState.Idle)
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
-    
+
+    private val _resendCountdown = MutableStateFlow(0)
+    val resendCountdown: StateFlow<Int> = _resendCountdown.asStateFlow()
+
     private var verificationId: String? = null
     private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
 
@@ -71,6 +75,7 @@ class OnboardingViewModel : ViewModel() {
                 verificationId = vId
                 resendToken = token
                 _uiState.value = OnboardingUiState.OtpSent(formattedNumber)
+                startResendCountdown()
             }
         }
 
@@ -152,6 +157,7 @@ class OnboardingViewModel : ViewModel() {
                 verificationId = vId
                 resendToken = newToken
                 _uiState.value = OnboardingUiState.OtpSent(phoneNumber)
+                startResendCountdown()
             }
         }
 
@@ -201,10 +207,23 @@ class OnboardingViewModel : ViewModel() {
     }
 
     /**
+     * Starts a 60-second countdown for the resend OTP button
+     */
+    private fun startResendCountdown() {
+        viewModelScope.launch {
+            for (i in 60 downTo 0) {
+                _resendCountdown.value = i
+                if (i > 0) delay(1000L)
+            }
+        }
+    }
+
+    /**
      * Resets UI state to Idle
      */
     fun resetState() {
         _uiState.value = OnboardingUiState.Idle
+        _resendCountdown.value = 0
     }
 }
 

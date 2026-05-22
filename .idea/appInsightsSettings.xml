@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.urvoice.app" />
+                  <option name="mobileSdkAppId" value="1:250656150293:android:ceb66c4f65c055fcb1cf1c" />
+                  <option name="projectId" value="urvoice-a51e0" />
+                  <option name="projectNumber" value="250656150293" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

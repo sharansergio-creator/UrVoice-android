@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
 }
 
@@ -34,6 +35,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    buildFeatures {
+        compose = true
+    }
 }
 
 dependencies {
@@ -56,7 +60,18 @@ dependencies {
 
 // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
 // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+
+    // Compose BOM
+    implementation(platform("androidx.compose:compose-bom:2025.03.01"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 }
