@@ -16,12 +16,14 @@ import java.util.Calendar
 
 data class DashboardStats(
     val totalToday: Int = 0,
-    val completed: Int = 0,
-    val active: Int = 0
+    val customers: Int = 0,
+    val spamBlocked: Int = 0
 )
 
 data class DashboardUiState(
     val sessions: List<CallSession> = emptyList(),
+    val filteredSessions: List<CallSession> = emptyList(),
+    val selectedFilter: String = "ALL",
     val stats: DashboardStats = DashboardStats(),
     val isLoading: Boolean = true,
     val error: String? = null,
@@ -56,6 +58,14 @@ class DashboardViewModel : ViewModel() {
                 Log.e("UrVoice", "fetchBusinessName error: ${e.message}")
             }
         }
+    }
+
+    fun setFilter(filter: String) {
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            selectedFilter   = filter,
+            filteredSessions = applyFilter(current.sessions, filter)
+        )
     }
 
     fun refresh() {
@@ -102,14 +112,20 @@ class DashboardViewModel : ViewModel() {
                 } ?: emptyList()).sortedByDescending { it.startTime }
                 Log.d("UrVoice", "Mapped ${sessions.size} CallSession objects")
 
-                _uiState.value = DashboardUiState(
-                    sessions = sessions,
-                    stats = computeStats(sessions),
-                    isLoading = false,
-                    error = null
+                val currentFilter = _uiState.value.selectedFilter
+                _uiState.value = _uiState.value.copy(
+                    sessions         = sessions,
+                    filteredSessions = applyFilter(sessions, currentFilter),
+                    stats            = computeStats(sessions),
+                    isLoading        = false,
+                    error            = null
                 )
             }
     }
+
+    private fun applyFilter(sessions: List<CallSession>, filter: String): List<CallSession> =
+        if (filter == "ALL") sessions
+        else sessions.filter { it.category?.uppercase() == filter }
 
     private fun computeStats(sessions: List<CallSession>): DashboardStats {
         val startOfDay = Calendar.getInstance().apply {
@@ -119,12 +135,12 @@ class DashboardViewModel : ViewModel() {
             set(Calendar.MILLISECOND, 0)
         }.time
 
-        val todaySessions = sessions.filter { it.startTime?.after(startOfDay) == true }
+        val today = sessions.filter { it.startTime?.after(startOfDay) == true }
 
         return DashboardStats(
-            totalToday = todaySessions.size,
-            completed  = todaySessions.count { it.status == "completed" },
-            active     = todaySessions.count { it.status == "active" }
+            totalToday  = today.size,
+            customers   = today.count { it.category?.uppercase() == "CUSTOMER" },
+            spamBlocked = today.count { it.category?.uppercase() in setOf("SPAM", "BLOCKED") }
         )
     }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -199,13 +200,19 @@ fun DashboardScreen(
                         item {
                             RecentCallsHeader()
                         }
-                        if (uiState.sessions.isEmpty()) {
+                        item {
+                            FilterChipsRow(
+                                selectedFilter = uiState.selectedFilter,
+                                onFilterChange = viewModel::setFilter
+                            )
+                        }
+                        if (uiState.filteredSessions.isEmpty()) {
                             item {
                                 EmptyCallsContent()
                             }
                         } else {
                             items(
-                                items = uiState.sessions,
+                                items = uiState.filteredSessions,
                                 key = { it.sessionId ?: it.hashCode().toString() }
                             ) { session ->
                                 CallSessionItem(session = session, onClick = { selectedSession = session })
@@ -308,15 +315,15 @@ private fun StatsSection(stats: DashboardStats) {
             )
             StatCard(
                 modifier = Modifier.weight(1f),
-                label = "Completed",
-                value = stats.completed.toString(),
+                label = "Customers",
+                value = stats.customers.toString(),
                 valueColor = Color(0xFF4CAF50)
             )
             StatCard(
                 modifier = Modifier.weight(1f),
-                label = "Active",
-                value = stats.active.toString(),
-                valueColor = Color(0xFFFF9800)
+                label = "Spam Blocked",
+                value = stats.spamBlocked.toString(),
+                valueColor = Color(0xFFFF5252)
             )
         }
     }
@@ -355,6 +362,45 @@ private fun StatCard(
                 textAlign = TextAlign.Center,
                 lineHeight = 14.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun FilterChipsRow(
+    selectedFilter: String,
+    onFilterChange: (String) -> Unit
+) {
+    val filters = listOf(
+        "ALL"         to "All",
+        "CUSTOMER"    to "Customers",
+        "SPAM"        to "Spam",
+        "BLOCKED"     to "Blocked",
+        "AFTER_HOURS" to "After Hours"
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        filters.forEach { (key, label) ->
+            val selected = selectedFilter == key
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (selected) AccentColor else SurfaceColor)
+                    .clickable { onFilterChange(key) }
+                    .padding(horizontal = 16.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text       = label,
+                    color      = if (selected) Color.White else TextSecondary,
+                    fontSize   = 13.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                )
+            }
         }
     }
 }
