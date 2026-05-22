@@ -17,8 +17,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import com.urvoice.app.ui.business.BusinessSetupScreen
 import com.urvoice.app.ui.dashboard.DashboardScreen
 import com.urvoice.app.ui.onboarding.OnboardingScreen
@@ -102,6 +104,19 @@ class MainActivity : ComponentActivity() {
 
 /** Checks Firestore for an existing business profile and returns the right destination. */
 private suspend fun resolveScreenForUser(uid: String): Screen {
+    // Register / refresh the FCM token now that we have a confirmed signed-in uid
+    FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return@addOnSuccessListener
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .document(currentUid)
+            .set(
+                mapOf("fcmToken" to token, "userId" to currentUid),
+                com.google.firebase.firestore.SetOptions.merge()
+            )
+        Log.d("UrVoice", "FCM token saved for user: $currentUid, token: $token")
+    }
+
     return try {
         val doc = FirebaseFirestore.getInstance()
             .collection("business_context")

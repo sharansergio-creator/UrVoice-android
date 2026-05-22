@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -15,13 +16,19 @@ class UrVoiceMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
+            Log.d("UrVoice", "onNewToken: no signed-in user, token will be saved on next sign-in")
+            return
+        }
         FirebaseFirestore.getInstance()
             .collection("users")
             .document(uid)
             .update("fcmToken", token)
+            .addOnSuccessListener {
+                Log.d("UrVoice", "FCM token refreshed for user: $uid")
+            }
             .addOnFailureListener { e ->
-                println("Failed to save FCM token: $e")
+                Log.w("UrVoice", "Failed to save FCM token: $e")
             }
     }
 
