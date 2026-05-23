@@ -156,6 +156,7 @@ fun DashboardScreen(
         when (selectedTab) {
             1 -> ContactsContent(
                 paddingValues = paddingValues,
+                onNavigateBack = { selectedTab = 0 },
                 viewModel     = contactsViewModel
             )
             else -> PullToRefreshBox(

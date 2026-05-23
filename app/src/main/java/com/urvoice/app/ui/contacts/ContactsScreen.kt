@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.ContactsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -150,6 +151,7 @@ fun ContactsTopBar() {
 @Composable
 fun ContactsContent(
     paddingValues: PaddingValues,
+    onNavigateBack: () -> Unit = {},
     viewModel: ContactsViewModel = viewModel()
 ) {
     val uiState         by viewModel.uiState.collectAsState()
@@ -157,6 +159,8 @@ fun ContactsContent(
     var searchQuery     by remember { mutableStateOf("") }
     var selectedContact by remember { mutableStateOf<Contact?>(null) }
     var pendingContact  by remember { mutableStateOf<PendingContact?>(null) }
+
+    BackHandler { onNavigateBack() }
 
     val context = LocalContext.current
     val scope   = rememberCoroutineScope()

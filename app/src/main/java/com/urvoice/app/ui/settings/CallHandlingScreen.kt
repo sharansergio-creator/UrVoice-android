@@ -2,6 +2,7 @@ package com.urvoice.app.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -108,6 +109,8 @@ fun CallHandlingScreen(
     val scrollState      = rememberScrollState()
 
     var copiedCode by remember { mutableStateOf(false) }
+
+    BackHandler { onBack() }
 
     LaunchedEffect(copiedCode) {
         if (copiedCode) { delay(2000L); copiedCode = false }

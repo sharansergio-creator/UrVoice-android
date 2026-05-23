@@ -64,6 +64,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.material.icons.filled.CheckCircle
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -113,14 +120,22 @@ fun BusinessSetupScreen(
     val fetchState by viewModel.fetchState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    var showSuccessSnackbar by remember { mutableStateOf(false) }
 
     // System back in edit mode → return to Settings instead of closing the app
     BackHandler(enabled = isEditMode) { onNavigateToDashboard() }
 
     LaunchedEffect(saveSuccess) {
         if (saveSuccess) {
-            viewModel.resetSaveSuccess()  // clear immediately so re-entry doesn't re-navigate
-            onNavigateToDashboard()       // navigate immediately — no snackbar delay
+            viewModel.resetSaveSuccess()
+            if (isEditMode) {
+                showSuccessSnackbar = true
+                delay(3000L)
+                showSuccessSnackbar = false
+                onNavigateToDashboard()
+            } else {
+                onNavigateToDashboard()
+            }
         }
     }
 
@@ -544,6 +559,54 @@ fun BusinessSetupScreen(
                 )
             }
         )
+        AnimatedVisibility(
+            visible = showSuccessSnackbar,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit  = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = Color(0xFF1E1E1E),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = Color(0xFF6C63FF).copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+            ) {
+                // Left accent bar
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(56.dp)
+                        .background(
+                            color = Color(0xFF6C63FF),
+                            shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                        )
+                )
+                Spacer(Modifier.width(12.dp))
+                Icon(
+                    imageVector        = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint               = Color(0xFF4CAF50),
+                    modifier           = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text       = "Business profile updated successfully",
+                    color      = Color.White,
+                    fontSize   = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     } // end Box
 }
 
