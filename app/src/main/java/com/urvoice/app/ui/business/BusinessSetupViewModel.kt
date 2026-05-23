@@ -273,6 +273,15 @@ class BusinessSetupViewModel : ViewModel() {
                     "userId" to uid
                 )
                 db.collection("business_context").document(uid).set(data).await()
+                // Only provision a number if user doesn't already have one
+                val userDoc = db.collection("users")
+                    .document(uid)
+                    .get()
+                    .await()
+                val existingNumber = userDoc.getString("twilioNumber")
+                if (existingNumber == null) {
+                    provisionPhoneNumber(uid)
+                }
                 _saveSuccess.value = true
             } catch (e: Exception) {
                 _error.value = "Save failed: ${e.message}"
@@ -283,6 +292,29 @@ class BusinessSetupViewModel : ViewModel() {
     }
 
     // ──────────────────────────── helpers ───────────────────────────────────
+
+    private suspend fun provisionPhoneNumber(userId: String) {
+        try {
+            val response = UrVoiceApi.service.provisionNumber(
+                mapOf("user_id" to userId, "country_code" to "US")
+            )
+            if (response.isSuccessful) {
+                val body = response.body()
+                val number = body?.get("phoneNumber") as? String
+                if (number != null) {
+                    db.collection("users")
+                        .document(userId)
+                        .update("twilioNumber", number)
+                        .await()
+                    android.util.Log.d(TAG, "Provisioned number: $number for user: $userId")
+                }
+            } else {
+                android.util.Log.e(TAG, "Provision number failed: ${response.errorBody()?.string()}")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "provisionPhoneNumber error: ${e.message}")
+        }
+    }
 
     private fun computeProgress(): Float {
         var filled = 0

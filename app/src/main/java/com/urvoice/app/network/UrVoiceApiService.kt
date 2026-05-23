@@ -26,6 +26,9 @@ interface UrVoiceApiService {
     suspend fun fetchBusinessContext(
         @Body request: FetchBusinessContextRequest
     ): Response<ResponseBody>
+
+    @POST("provision-number")
+    suspend fun provisionNumber(@Body body: Map<String, String>): Response<Map<String, Any>>
 }
 
 object UrVoiceApi {
