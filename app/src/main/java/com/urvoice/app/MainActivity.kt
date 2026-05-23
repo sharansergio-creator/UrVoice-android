@@ -33,9 +33,10 @@ import com.urvoice.app.ui.dashboard.DashboardScreen
 import com.urvoice.app.ui.onboarding.OnboardingScreen
 import com.urvoice.app.ui.settings.CallHandlingScreen
 import com.urvoice.app.ui.settings.SettingsScreen
+import com.urvoice.app.ui.voice.AiVoiceSetupScreen
 import kotlinx.coroutines.tasks.await
 
-enum class Screen { ONBOARDING, BUSINESS_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT, CALL_HANDLING }
+enum class Screen { ONBOARDING, BUSINESS_SETUP, AI_VOICE_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT, CALL_HANDLING }
 
 class MainActivity : ComponentActivity() {
 
@@ -91,7 +92,12 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Screen.BUSINESS_SETUP -> BusinessSetupScreen(
-                        onNavigateToDashboard = { screen = Screen.DASHBOARD }
+                        onNavigateToDashboard = { screen = Screen.AI_VOICE_SETUP }
+                    )
+
+                    Screen.AI_VOICE_SETUP -> AiVoiceSetupScreen(
+                        onComplete = { screen = Screen.DASHBOARD },
+                        onSkip = { screen = Screen.DASHBOARD }
                     )
 
                     Screen.SETTINGS -> SettingsScreen(
