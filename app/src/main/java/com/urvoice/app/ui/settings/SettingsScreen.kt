@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -66,6 +67,7 @@ fun SettingsScreen(
     onCallHandling: () -> Unit,
     onSignOut: () -> Unit,
     onNavigateToVoiceSetup: () -> Unit = {},
+    onNavigateToBilling: () -> Unit = {},
 ) {
     var showSignOutDialog by remember { mutableStateOf(false) }
     var hasVoice by remember { mutableStateOf(false) }
@@ -148,6 +150,18 @@ fun SettingsScreen(
             title      = "Edit Business Profile",
             subtitle   = "Update name, hours, services and more",
             onClick    = onEditProfile
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Billing section ──────────────────────────────────────────────────
+        SettingsSectionHeader("Subscription")
+        SettingsItem(
+            icon     = Icons.Default.CreditCard,
+            iconTint = Color(0xFFFFD700),
+            title    = "Upgrade Plan",
+            subtitle = "Basic ₹999/mo · Premium ₹2,499/mo",
+            onClick  = onNavigateToBilling
         )
 
         Spacer(Modifier.height(16.dp))

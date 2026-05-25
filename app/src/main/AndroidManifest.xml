@@ -17,9 +17,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UrVoice">
 
+        <meta-data
+            android:name="com.razorpay.ApiKey"
+            android:value="rzp_test_SthWC7rSwKuc49" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.UrVoice">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keepclassmembers class * implements com.razorpay.* {*;}
+-keep class com.razorpay.** {*;}
+-dontwarn com.razorpay.**
+-keep class proguard.annotation.Keep
+-keep class proguard.annotation.KeepClassMembers

@@ -21,6 +21,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\"")
+        buildConfigField("String", "RAZORPAY_KEY_ID", "\"${project.findProperty("RAZORPAY_KEY_ID") ?: ""}\"")
     }
 
     buildTypes {
@@ -77,4 +78,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.9.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // Razorpay
+    implementation("com.razorpay:checkout:1.6.33")
 }

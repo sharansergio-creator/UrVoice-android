@@ -47,6 +47,12 @@ interface UrVoiceApiService {
 
     @POST("analyze-questions")
     suspend fun analyzeQuestions(@Body body: Map<String, String>): Response<Map<String, Any>>
+
+    @POST("create-order")
+    suspend fun createOrder(@Body body: Map<String, String>): Response<Map<String, Any>>
+
+    @POST("verify-payment")
+    suspend fun verifyPayment(@Body body: Map<String, String>): Response<Map<String, Any>>
 }
 
 object UrVoiceApi {

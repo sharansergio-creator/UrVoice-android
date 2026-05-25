@@ -34,15 +34,34 @@ import com.urvoice.app.ui.dashboard.DashboardScreen
 import com.urvoice.app.ui.onboarding.OnboardingScreen
 import com.urvoice.app.ui.settings.CallHandlingScreen
 import com.urvoice.app.ui.settings.SettingsScreen
+import com.urvoice.app.ui.billing.BillingScreen
 import com.urvoice.app.ui.voice.AiVoiceSetupScreen
 import kotlinx.coroutines.tasks.await
 
-enum class Screen { ONBOARDING, BUSINESS_SETUP, AI_VOICE_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT, CALL_HANDLING }
+enum class Screen { ONBOARDING, BUSINESS_SETUP, AI_VOICE_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT, CALL_HANDLING, BILLING }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), com.razorpay.PaymentResultWithDataListener {
+
+    private var billingViewModel: com.urvoice.app.ui.billing.BillingViewModel? = null
+
+    fun setBillingViewModel(vm: com.urvoice.app.ui.billing.BillingViewModel) {
+        billingViewModel = vm
+    }
+
+    override fun onPaymentSuccess(razorpayPaymentId: String?, data: com.razorpay.PaymentData?) {
+        android.util.Log.d("Razorpay", "Payment success: $razorpayPaymentId")
+        val paymentId = razorpayPaymentId ?: return
+        val signature = data?.signature ?: ""
+        billingViewModel?.verifyPayment(paymentId, signature)
+    }
+
+    override fun onPaymentError(errorCode: Int, response: String?, data: com.razorpay.PaymentData?) {
+        android.util.Log.e("Razorpay", "Payment error: $errorCode - $response")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.razorpay.Checkout.preload(applicationContext)
         createNotificationChannels()
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -109,10 +128,15 @@ class MainActivity : ComponentActivity() {
                         onEditProfile = { screen = Screen.BUSINESS_EDIT },
                         onCallHandling = { screen = Screen.CALL_HANDLING },
                         onSignOut = { screen = Screen.ONBOARDING },
-                        onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ }
+                        onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ },
+                        onNavigateToBilling = { screen = Screen.BILLING }
                     )
 
                     Screen.CALL_HANDLING -> CallHandlingScreen(
+                        onBack = { screen = Screen.SETTINGS }
+                    )
+
+                    Screen.BILLING -> BillingScreen(
                         onBack = { screen = Screen.SETTINGS }
                     )
 
