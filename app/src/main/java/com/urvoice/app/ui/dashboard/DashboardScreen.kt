@@ -102,7 +102,8 @@ fun DashboardScreen(
     onNavigateToContacts: () -> Unit = {},
     onNavigateToVoiceSetup: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel(),
-    contactsViewModel: ContactsViewModel = viewModel()
+    contactsViewModel: ContactsViewModel = viewModel(),
+    analyticsViewModel: com.urvoice.app.ui.analytics.AnalyticsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
@@ -163,7 +164,7 @@ fun DashboardScreen(
         containerColor = BackgroundColor
     ) { paddingValues ->
         when (selectedTab) {
-            1 -> AnalyticsScreen()
+            1 -> AnalyticsScreen(viewModel = analyticsViewModel)
             2 -> ContactsContent(
                 paddingValues = paddingValues,
                 onNavigateBack = { selectedTab = 0 },
