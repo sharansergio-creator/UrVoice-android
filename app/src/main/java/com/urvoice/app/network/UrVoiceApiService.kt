@@ -44,6 +44,9 @@ interface UrVoiceApiService {
 
     @POST("delete-voice")
     suspend fun deleteVoice(@Body body: Map<String, String>): Response<Map<String, Any>>
+
+    @POST("analyze-questions")
+    suspend fun analyzeQuestions(@Body body: Map<String, String>): Response<Map<String, Any>>
 }
 
 object UrVoiceApi {

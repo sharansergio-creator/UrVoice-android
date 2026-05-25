@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
@@ -77,6 +78,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.urvoice.app.data.model.CallSession
 import com.urvoice.app.data.model.Exchange
+import com.urvoice.app.ui.analytics.AnalyticsScreen
+import com.urvoice.app.ui.analytics.AnalyticsViewModel
 import com.urvoice.app.ui.contacts.ContactsContent
 import com.urvoice.app.ui.contacts.ContactsTopBar
 import com.urvoice.app.ui.contacts.ContactsViewModel
@@ -125,7 +128,7 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             when (selectedTab) {
-                1 -> ContactsTopBar()
+                2 -> ContactsTopBar()
                 else -> DashboardTopBar(onSettingsClick = onNavigateToSettings)
             }
         },
@@ -134,8 +137,8 @@ fun DashboardScreen(
                 selectedTab = selectedTab,
                 onTabSelected = { tab ->
                     when (tab) {
-                        2 -> onNavigateToVoiceSetup()
-                        3 -> onNavigateToSettings()
+                        3 -> onNavigateToVoiceSetup()
+                        4 -> onNavigateToSettings()
                         else -> selectedTab = tab
                     }
                 }
@@ -160,7 +163,8 @@ fun DashboardScreen(
         containerColor = BackgroundColor
     ) { paddingValues ->
         when (selectedTab) {
-            1 -> ContactsContent(
+            1 -> AnalyticsScreen()
+            2 -> ContactsContent(
                 paddingValues = paddingValues,
                 onNavigateBack = { selectedTab = 0 },
                 viewModel     = contactsViewModel
@@ -276,10 +280,11 @@ private fun DashboardBottomNav(
         tonalElevation = 0.dp
     ) {
         listOf(
-            Triple(Icons.Default.Home, "Dashboard", 0),
-            Triple(Icons.Default.Person, "Contacts", 1),
-            Triple(Icons.Default.Mic, "AI Voice", 2),
-            Triple(Icons.Default.Settings, "Settings", 3)
+            Triple(Icons.Default.Home, "Home", 0),
+            Triple(Icons.Default.BarChart, "Analytics", 1),
+            Triple(Icons.Default.Person, "Contacts", 2),
+            Triple(Icons.Default.Mic, "AI Voice", 3),
+            Triple(Icons.Default.Settings, "Settings", 4)
         ).forEach { (icon, label, index) ->
             NavigationBarItem(
                 selected = selectedTab == index,
