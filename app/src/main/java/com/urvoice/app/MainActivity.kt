@@ -19,6 +19,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
                 var screen by remember {
                     mutableStateOf(if (currentUser != null) null else Screen.ONBOARDING)
                 }
+                var aiVoiceKey by remember { mutableStateOf(0) }
 
                 // When the app launches with an existing session, check Firestore once
                 LaunchedEffect(currentUser?.uid) {
@@ -92,19 +94,22 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Screen.BUSINESS_SETUP -> BusinessSetupScreen(
-                        onNavigateToDashboard = { screen = Screen.AI_VOICE_SETUP }
+                        onNavigateToDashboard = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ }
                     )
 
-                    Screen.AI_VOICE_SETUP -> AiVoiceSetupScreen(
-                        onComplete = { screen = Screen.DASHBOARD },
-                        onSkip = { screen = Screen.DASHBOARD }
-                    )
+                    Screen.AI_VOICE_SETUP -> key(aiVoiceKey) {
+                        AiVoiceSetupScreen(
+                            onComplete = { screen = Screen.DASHBOARD },
+                            onSkip = { screen = Screen.DASHBOARD }
+                        )
+                    }
 
                     Screen.SETTINGS -> SettingsScreen(
                         onBack = { screen = Screen.DASHBOARD },
                         onEditProfile = { screen = Screen.BUSINESS_EDIT },
                         onCallHandling = { screen = Screen.CALL_HANDLING },
-                        onSignOut = { screen = Screen.ONBOARDING }
+                        onSignOut = { screen = Screen.ONBOARDING },
+                        onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ }
                     )
 
                     Screen.CALL_HANDLING -> CallHandlingScreen(
@@ -117,7 +122,8 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Screen.DASHBOARD -> DashboardScreen(
-                        onNavigateToSettings = { screen = Screen.SETTINGS }
+                        onNavigateToSettings = { screen = Screen.SETTINGS },
+                        onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ }
                     )
 
                     // null = resolving (spinner shown while Firestore is queried)

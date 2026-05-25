@@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Mic
@@ -48,6 +49,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -95,6 +97,7 @@ private val TextSecondary = Color(0xFF888888)
 fun DashboardScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToContacts: () -> Unit = {},
+    onNavigateToVoiceSetup: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel(),
     contactsViewModel: ContactsViewModel = viewModel()
 ) {
@@ -130,8 +133,11 @@ fun DashboardScreen(
             DashboardBottomNav(
                 selectedTab = selectedTab,
                 onTabSelected = { tab ->
-                    selectedTab = tab
-                    if (tab == 2) onNavigateToSettings()
+                    when (tab) {
+                        2 -> onNavigateToVoiceSetup()
+                        3 -> onNavigateToSettings()
+                        else -> selectedTab = tab
+                    }
                 }
             )
         },
@@ -272,7 +278,8 @@ private fun DashboardBottomNav(
         listOf(
             Triple(Icons.Default.Home, "Dashboard", 0),
             Triple(Icons.Default.Person, "Contacts", 1),
-            Triple(Icons.Default.Settings, "Settings", 2)
+            Triple(Icons.Default.Mic, "AI Voice", 2),
+            Triple(Icons.Default.Settings, "Settings", 3)
         ).forEach { (icon, label, index) ->
             NavigationBarItem(
                 selected = selectedTab == index,

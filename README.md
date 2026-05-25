@@ -45,8 +45,6 @@ Sub-second responses on most turns. First response slightly higher (~2.2s) due t
 
 ![UrVoice Architecture](docs/urvoice_architecture_diagram.svg)
 
----
-
 ## Tech Stack
 
 ### Android App

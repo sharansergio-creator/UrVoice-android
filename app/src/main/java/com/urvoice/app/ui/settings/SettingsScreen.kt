@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -33,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 private val Background   = Color(0xFF0A0A0A)
 private val Surface      = Color(0xFF1A1A1A)
@@ -61,8 +65,24 @@ fun SettingsScreen(
     onEditProfile: () -> Unit,
     onCallHandling: () -> Unit,
     onSignOut: () -> Unit,
+    onNavigateToVoiceSetup: () -> Unit = {},
 ) {
     var showSignOutDialog by remember { mutableStateOf(false) }
+    var hasVoice by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val uid = FirebaseAuth.getInstance().currentUser?.uid
+            if (uid != null) {
+                val doc = FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(uid)
+                    .get()
+                    .await()
+                hasVoice = doc.getString("elevenLabsVoiceId") != null
+            }
+        } catch (_: Exception) {}
+    }
 
     BackHandler { onBack() }
 
@@ -143,7 +163,18 @@ fun SettingsScreen(
         )
 
         Spacer(Modifier.height(16.dp))
+        // ── AI Voice section ─────────────────────────────────────────────────────────────────
+        SettingsSectionHeader("AI Voice")
+        SettingsItem(
+            icon = Icons.Default.Mic,
+            iconTint = Color(0xFF7C3AED),
+            title = "AI Voice Clone",
+            subtitle = if (hasVoice) "● Voice Active" else "Not configured",
+            subtitleColor = if (hasVoice) Color(0xFF1DB954) else TextSecondary,
+            onClick = onNavigateToVoiceSetup
+        )
 
+        Spacer(Modifier.height(16.dp))
         // ── Account section ──────────────────────────────────────────────────
         SettingsSectionHeader("Account")
         SettingsItem(
@@ -195,6 +226,7 @@ private fun SettingsItem(
     title: String,
     subtitle: String = "",
     titleColor: Color = TextPrimary,
+    subtitleColor: Color = TextSecondary,
     onClick: () -> Unit,
 ) {
     Row(
@@ -218,7 +250,7 @@ private fun SettingsItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, color = titleColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
             if (subtitle.isNotBlank()) {
-                Text(text = subtitle, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                Text(text = subtitle, color = subtitleColor, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
             }
         }
         Icon(
