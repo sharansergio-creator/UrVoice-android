@@ -25,7 +25,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.urvoice.app.data.PlanManager
+import kotlinx.coroutines.tasks.await
 import com.razorpay.Checkout
 import com.razorpay.PaymentResultListener
 import com.urvoice.app.BuildConfig
@@ -56,6 +59,13 @@ class BillingViewModel : ViewModel() {
 
     var pendingOrderId: String? = null
     var pendingPlan: String? = null
+
+    init {
+        viewModelScope.launch {
+            PlanManager.loadPlan()
+            _state.value = _state.value.copy(currentPlan = PlanManager.currentPlan.value)
+        }
+    }
 
     fun selectPlan(plan: String) {
         _state.value = _state.value.copy(selectedPlan = plan)
@@ -121,6 +131,7 @@ class BillingViewModel : ViewModel() {
                         currentPlan = plan,
                         success = "🎉 ${if (plan == "basic") "Basic" else "Premium"} plan activated!"
                     )
+                    com.urvoice.app.data.PlanManager.setPlan(plan)
                 } else {
                     _state.value = _state.value.copy(
                         isLoading = false,
@@ -138,6 +149,32 @@ class BillingViewModel : ViewModel() {
 
     fun clearMessages() {
         _state.value = _state.value.copy(error = null, success = null)
+    }
+
+    fun cancelSubscription() {
+        viewModelScope.launch {
+            try {
+                _state.value = _state.value.copy(isLoading = true)
+                val uid = Firebase.auth.currentUser?.uid ?: return@launch
+                Firebase.firestore.collection("subscriptions").document(uid).update(
+                    mapOf("status" to "cancelled")
+                ).await()
+                Firebase.firestore.collection("users").document(uid).update(
+                    mapOf("plan" to "free", "subscriptionStatus" to "cancelled")
+                ).await()
+                PlanManager.setPlan("free")
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    currentPlan = "free",
+                    success = "Subscription cancelled."
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = "Cancel failed: ${e.message}"
+                )
+            }
+        }
     }
 }
 
@@ -246,54 +283,128 @@ fun BillingScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Subscribe button
-            Button(
-                onClick = {
-                    viewModel.createOrder(state.selectedPlan) { orderId, amount ->
-                        activity?.let { act ->
-                            val checkout = com.razorpay.Checkout()
-                            checkout.setKeyID(BuildConfig.RAZORPAY_KEY_ID)
-                            checkout.setImage(com.urvoice.app.R.mipmap.ic_launcher)
-                            val options = org.json.JSONObject().apply {
-                                put("name", "UrVoice")
-                                put("description", if (state.selectedPlan == "basic") "Basic Plan - ₹999/month" else "Premium Plan - ₹2499/month")
-                                put("order_id", orderId)
-                                put("currency", "INR")
-                                put("amount", amount)
-                                put("theme", org.json.JSONObject().apply {
-                                    put("color", "#7C3AED")
-                                })
+            if (state.currentPlan == "free") {
+                Button(
+                    onClick = {
+                        viewModel.createOrder(state.selectedPlan) { orderId, amount ->
+                            activity?.let { act ->
+                                val checkout = com.razorpay.Checkout()
+                                checkout.setKeyID(BuildConfig.RAZORPAY_KEY_ID)
+                                checkout.setImage(com.urvoice.app.R.mipmap.ic_launcher)
+                                val options = org.json.JSONObject().apply {
+                                    put("name", "UrVoice")
+                                    put("description", if (state.selectedPlan == "basic") "Basic Plan - ₹999/month" else "Premium Plan - ₹2499/month")
+                                    put("order_id", orderId)
+                                    put("currency", "INR")
+                                    put("amount", amount)
+                                    put("theme", org.json.JSONObject().apply {
+                                        put("color", "#7C3AED")
+                                    })
+                                }
+                                checkout.open(act, options)
                             }
-                            checkout.open(act, options)
                         }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    enabled = !state.isLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (state.selectedPlan == "premium") Color(0xFFFFD700) else Color(0xFF7C3AED),
+                        contentColor = if (state.selectedPlan == "premium") Color.Black else Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text(
+                            "Subscribe to ${if (state.selectedPlan == "basic") "Basic" else "Premium"}",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = !state.isLoading && state.selectedPlan != state.currentPlan,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (state.selectedPlan == "premium") BillingGold else BillingPurple,
-                    contentColor = if (state.selectedPlan == "premium") Color.Black else Color.White
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
-                } else {
-                    Text(
-                        "Subscribe to ${if (state.selectedPlan == "basic") "Basic" else "Premium"}",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                }
+            } else {
+                // Already subscribed — show active state
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (state.currentPlan == "premium") Color(0xFFFFD700).copy(alpha = 0.1f) else Color(0xFF7C3AED).copy(alpha = 0.1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            if (state.currentPlan == "premium") "✨ Premium Active" else "⚡ Basic Active",
+                            color = if (state.currentPlan == "premium") Color(0xFFFFD700) else Color(0xFFBB86FC),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Upgrade to Premium if on Basic
+                if (state.currentPlan == "basic") {
+                    Button(
+                        onClick = {
+                            viewModel.createOrder("premium") { orderId, amount ->
+                                activity?.let { act ->
+                                    val checkout = com.razorpay.Checkout()
+                                    checkout.setKeyID(BuildConfig.RAZORPAY_KEY_ID)
+                                    checkout.setImage(com.urvoice.app.R.mipmap.ic_launcher)
+                                    val options = org.json.JSONObject().apply {
+                                        put("name", "UrVoice")
+                                        put("description", "Premium Plan - ₹2499/month")
+                                        put("order_id", orderId)
+                                        put("currency", "INR")
+                                        put("amount", amount)
+                                        put("theme", org.json.JSONObject().apply {
+                                            put("color", "#FFD700")
+                                        })
+                                    }
+                                    checkout.open(act, options)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFD700),
+                            contentColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("✨ Upgrade to Premium", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                // Cancel subscription
+                var showCancelDialog by remember { mutableStateOf(false) }
+                if (showCancelDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showCancelDialog = false },
+                        containerColor = Color(0xFF141420),
+                        title = { Text("Cancel Subscription?", color = Color.White) },
+                        text = { Text("Your plan will revert to free at the end of the billing period.", color = Color.White.copy(alpha = 0.7f)) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                viewModel.cancelSubscription()
+                                showCancelDialog = false
+                            }) { Text("Cancel Plan", color = Color.Red) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showCancelDialog = false }) {
+                                Text("Keep Plan", color = Color.White.copy(alpha = 0.5f))
+                            }
+                        }
                     )
                 }
-            }
-
-            if (state.currentPlan != "free") {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Current plan: ${state.currentPlan.replaceFirstChar { it.uppercase() }}",
-                    color = BillingGreen,
-                    fontSize = 13.sp
-                )
+                TextButton(onClick = { showCancelDialog = true }) {
+                    Text("Cancel Subscription", color = Color.Red.copy(alpha = 0.6f), fontSize = 13.sp)
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -373,9 +484,9 @@ private fun PlanCard(
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(price, color = color, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text(period, color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(price, color = color, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
+                    Text(period, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
                 }
             }
 

@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.urvoice.app.data.model.CallSession
 import com.urvoice.app.data.model.Exchange
+import com.urvoice.app.data.PlanManager
 import com.urvoice.app.ui.analytics.AnalyticsScreen
 import com.urvoice.app.ui.analytics.AnalyticsViewModel
 import com.urvoice.app.ui.contacts.ContactsContent
@@ -101,6 +102,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToContacts: () -> Unit = {},
     onNavigateToVoiceSetup: () -> Unit = {},
+    onNavigateToBilling: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel(),
     contactsViewModel: ContactsViewModel = viewModel(),
     analyticsViewModel: com.urvoice.app.ui.analytics.AnalyticsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -164,7 +166,20 @@ fun DashboardScreen(
         containerColor = BackgroundColor
     ) { paddingValues ->
         when (selectedTab) {
-            1 -> AnalyticsScreen(viewModel = analyticsViewModel)
+            1 -> {
+                val plan by PlanManager.currentPlan.collectAsState()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    if (plan == "premium") {
+                        AnalyticsScreen(viewModel = analyticsViewModel)
+                    } else {
+                        com.urvoice.app.ui.analytics.AnalyticsPaywall(onUpgrade = onNavigateToBilling)
+                    }
+                }
+            }
             2 -> ContactsContent(
                 paddingValues = paddingValues,
                 onNavigateBack = { selectedTab = 0 },
@@ -245,16 +260,43 @@ fun DashboardScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DashboardTopBar(onSettingsClick: () -> Unit) {
+    val currentPlan by PlanManager.currentPlan.collectAsState()
     TopAppBar(
         title = {
-            Text(
-                text = "UrVoice",
-                style = TextStyle(
-                    brush = Brush.horizontalGradient(listOf(AccentLight, AccentColor)),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "UrVoice",
+                    style = TextStyle(
+                        brush = Brush.horizontalGradient(
+                            colors = if (currentPlan == "premium")
+                                listOf(Color(0xFFFFD700), Color(0xFFFFA500))
+                            else
+                                listOf(Color(0xFF9C94FF), Color(0xFF6C63FF))
+                        ),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 )
-            )
+                if (currentPlan != "free") {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (currentPlan == "premium")
+                            Color(0xFFFFD700).copy(alpha = 0.15f)
+                        else
+                            Color(0xFF7C3AED).copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = if (currentPlan == "premium") "✨ PREMIUM" else "⚡ BASIC",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            color = if (currentPlan == "premium") Color(0xFFFFD700) else Color(0xFFBB86FC),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+            }
         },
         actions = {
             IconButton(onClick = onSettingsClick) {
@@ -276,6 +318,8 @@ private fun DashboardBottomNav(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit
 ) {
+    val currentPlan by PlanManager.currentPlan.collectAsState()
+    val accentColor = if (currentPlan == "premium") Color(0xFFFFD700) else Color(0xFF6C63FF)
     NavigationBar(
         containerColor = Color(0xFF111111),
         tonalElevation = 0.dp
@@ -293,11 +337,11 @@ private fun DashboardBottomNav(
                 icon = { Icon(icon, contentDescription = label) },
                 label = { Text(label, fontSize = 11.sp) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = AccentColor,
-                    selectedTextColor = AccentColor,
+                    selectedIconColor = accentColor,
+                    selectedTextColor = accentColor,
                     unselectedIconColor = TextSecondary,
                     unselectedTextColor = TextSecondary,
-                    indicatorColor = AccentColor.copy(alpha = 0.15f)
+                    indicatorColor = accentColor.copy(alpha = 0.2f)
                 )
             )
         }

@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -35,10 +36,13 @@ import com.urvoice.app.ui.onboarding.OnboardingScreen
 import com.urvoice.app.ui.settings.CallHandlingScreen
 import com.urvoice.app.ui.settings.SettingsScreen
 import com.urvoice.app.ui.billing.BillingScreen
+import com.urvoice.app.ui.splash.SplashScreen
 import com.urvoice.app.ui.voice.AiVoiceSetupScreen
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-enum class Screen { ONBOARDING, BUSINESS_SETUP, AI_VOICE_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT, CALL_HANDLING, BILLING }
+enum class Screen { SPLASH, ONBOARDING, BUSINESS_SETUP, AI_VOICE_SETUP, DASHBOARD, SETTINGS, BUSINESS_EDIT, CALL_HANDLING, BILLING }
 
 class MainActivity : ComponentActivity(), com.razorpay.PaymentResultWithDataListener {
 
@@ -61,7 +65,13 @@ class MainActivity : ComponentActivity(), com.razorpay.PaymentResultWithDataList
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { false }
         com.razorpay.Checkout.preload(applicationContext)
+        // Load subscription plan
+        lifecycleScope.launch {
+            com.urvoice.app.data.PlanManager.loadPlan()
+        }
         createNotificationChannels()
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -90,9 +100,9 @@ class MainActivity : ComponentActivity(), com.razorpay.PaymentResultWithDataList
                 val auth = FirebaseAuth.getInstance()
                 val currentUser = auth.currentUser
 
-                // Start on ONBOARDING; if already signed in resolve the correct screen first
+                // Start on SPLASH; after splash resolve the correct screen
                 var screen by remember {
-                    mutableStateOf(if (currentUser != null) null else Screen.ONBOARDING)
+                    mutableStateOf<Screen?>(Screen.SPLASH)
                 }
                 var aiVoiceKey by remember { mutableStateOf(0) }
 
@@ -104,6 +114,10 @@ class MainActivity : ComponentActivity(), com.razorpay.PaymentResultWithDataList
                 }
 
                 when (screen) {
+                    Screen.SPLASH -> SplashScreen(
+                        onComplete = { screen = if (currentUser != null) null else Screen.ONBOARDING }
+                    )
+
                     Screen.ONBOARDING -> OnboardingScreen(
                         onNavigateToDashboard = {
                             // OTP verified; set screen to null so the LaunchedEffect
@@ -117,37 +131,61 @@ class MainActivity : ComponentActivity(), com.razorpay.PaymentResultWithDataList
                     )
 
                     Screen.AI_VOICE_SETUP -> key(aiVoiceKey) {
+                        androidx.activity.compose.BackHandler {
+                            screen = Screen.DASHBOARD
+                        }
                         AiVoiceSetupScreen(
                             onComplete = { screen = Screen.DASHBOARD },
                             onSkip = { screen = Screen.DASHBOARD }
                         )
                     }
 
-                    Screen.SETTINGS -> SettingsScreen(
-                        onBack = { screen = Screen.DASHBOARD },
-                        onEditProfile = { screen = Screen.BUSINESS_EDIT },
-                        onCallHandling = { screen = Screen.CALL_HANDLING },
-                        onSignOut = { screen = Screen.ONBOARDING },
-                        onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ },
-                        onNavigateToBilling = { screen = Screen.BILLING }
-                    )
+                    Screen.SETTINGS -> {
+                        androidx.activity.compose.BackHandler {
+                            screen = Screen.DASHBOARD
+                        }
+                        SettingsScreen(
+                            onBack = { screen = Screen.DASHBOARD },
+                            onEditProfile = { screen = Screen.BUSINESS_EDIT },
+                            onCallHandling = { screen = Screen.CALL_HANDLING },
+                            onSignOut = { screen = Screen.ONBOARDING },
+                            onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ },
+                            onNavigateToBilling = { screen = Screen.BILLING }
+                        )
+                    }
 
-                    Screen.CALL_HANDLING -> CallHandlingScreen(
-                        onBack = { screen = Screen.SETTINGS }
-                    )
+                    Screen.CALL_HANDLING -> {
+                        androidx.activity.compose.BackHandler {
+                            screen = Screen.SETTINGS
+                        }
+                        CallHandlingScreen(
+                            onBack = { screen = Screen.SETTINGS }
+                        )
+                    }
 
-                    Screen.BILLING -> BillingScreen(
-                        onBack = { screen = Screen.SETTINGS }
-                    )
+                    Screen.BILLING -> {
+                        androidx.activity.compose.BackHandler {
+                            screen = Screen.SETTINGS
+                        }
+                        BillingScreen(
+                            onBack = { screen = Screen.SETTINGS }
+                        )
+                    }
 
-                    Screen.BUSINESS_EDIT -> BusinessSetupScreen(
-                        isEditMode = true,
-                        onNavigateToDashboard = { screen = Screen.SETTINGS }
-                    )
+                    Screen.BUSINESS_EDIT -> {
+                        androidx.activity.compose.BackHandler {
+                            screen = Screen.SETTINGS
+                        }
+                        BusinessSetupScreen(
+                            isEditMode = true,
+                            onNavigateToDashboard = { screen = Screen.SETTINGS }
+                        )
+                    }
 
                     Screen.DASHBOARD -> DashboardScreen(
                         onNavigateToSettings = { screen = Screen.SETTINGS },
-                        onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ }
+                        onNavigateToVoiceSetup = { screen = Screen.AI_VOICE_SETUP; aiVoiceKey++ },
+                        onNavigateToBilling = { screen = Screen.BILLING }
                     )
 
                     // null = resolving (spinner shown while Firestore is queried)

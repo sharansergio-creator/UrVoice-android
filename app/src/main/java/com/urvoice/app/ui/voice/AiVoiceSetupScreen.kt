@@ -253,6 +253,8 @@ private fun LanguageCard(
                     fontSize = 13.sp
                 )
             }
+            val currentPlan by com.urvoice.app.data.PlanManager.currentPlan.collectAsState()
+            val isLocked = language.code != "en" && currentPlan == "basic"
             if (isActive) {
                 TextButton(onClick = onDelete) {
                     Text("Delete", color = Color.Red.copy(alpha = 0.7f), fontSize = 12.sp)
@@ -260,6 +262,19 @@ private fun LanguageCard(
                 Spacer(modifier = Modifier.width(4.dp))
                 TextButton(onClick = onSetup) {
                     Text("Re-record", color = PremiumPurpleLight, fontSize = 12.sp)
+                }
+            } else if (isLocked) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFD700).copy(alpha = 0.1f)
+                ) {
+                    Text(
+                        "✨ Premium",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        color = Color(0xFFFFD700),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             } else {
                 Button(
