@@ -1,245 +1,134 @@
-# UrVoice 🎙️
-> AI-powered phone assistant for Indian small businesses — answers calls in the owner's cloned voice
+# UrVoice Android 🎙️
 
-[![Android](https://img.shields.io/badge/Android-Kotlin-green)](https://github.com/sharansergio-creator/UrVoice)
-[![Backend](https://img.shields.io/badge/Backend-FastAPI-blue)](https://github.com/sharansergio-creator/UrVoice-backend)
+> AI phone assistant for Indian small businesses — answers calls 24/7 in the owner's cloned voice
+
+[![Android](https://img.shields.io/badge/Platform-Android-green)](https://github.com/sharansergio-creator/UrVoice-android)
+[![Kotlin](https://img.shields.io/badge/Language-Kotlin-blue)](https://github.com/sharansergio-creator/UrVoice-android)
+[![Firebase](https://img.shields.io/badge/Backend-Firebase-orange)](https://github.com/sharansergio-creator/UrVoice-android)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+> 📡 Backend repo: [UrVoice (FastAPI)](https://github.com/sharansergio-creator/UrVoice)
 
 ## What is UrVoice?
 
-UrVoice is an AI phone assistant that answers incoming calls for Indian small businesses — resorts, restaurants, clinics, shops — 24/7, in the owner's own cloned voice. Callers have a natural conversation with an AI that knows the business inside out.
+UrVoice is an Android app that lets Indian small businesses — resorts, restaurants, clinics, shops — handle incoming calls 24/7 using an AI assistant that speaks in the owner's own cloned voice. Callers have a natural conversation with an AI that knows the business inside out.
 
-**Live demo:** Call **+1 (620) 659-6566** to speak with the AI assistant for Vishmaa Resorts, Coorg, Karnataka.
+**Live demo:** Call **+1 (620) 659-6566** to speak with the AI assistant for Vishmaa Resorts, Coorg.
+
+---
+
+## Screens
+
+| Screen | Description |
+|---|---|
+| SplashScreen | Animated logo with radial glow and pulse effect |
+| OnboardingScreen | Phone OTP auth — +91 validation, 6-digit OTP, 60s resend countdown |
+| BusinessSetupScreen | Multi-section business form with auto-fill from Google Business Profile or website URL |
+| DashboardScreen | 5-tab hub — Home, Analytics, Contacts, AI Voice, Settings; live call stats with session list |
+| AiVoiceSetupScreen | 6-step voice cloning — language → script → environment check → record → process → confirm |
+| ContactsScreen | VIP / Customer / Blocked tabs; device contacts integration; long-press type management |
+| AnalyticsScreen | Premium: peak hours chart, 7-day trend, language breakdown, common questions |
+| BillingScreen | Free / Basic ₹999 / Premium ₹2,499 plans with Razorpay payment flow |
+| CallHandlingScreen | AI answering toggle, after-hours mode, call duration threshold, block list |
+| SettingsScreen | Business profile, plan upgrade, call handling, voice clone, sign out |
 
 ---
 
 ## Key Features
 
-- **Voice Cloning** — Business owner records a 45-second sample. ElevenLabs clones their voice. Every caller hears the owner, not a robot. Supports English, Kannada, Hindi, and Tamil.
-- **Multilingual** — Responds in English, Kannada, Hindi, Tamil, Telugu. Detects language automatically mid-call using Unicode script analysis + ElevenLabs Scribe.
-- **Smart Caller Recognition** — Identifies returning customers by phone number. Greets VIPs by name. Blocks spam callers. Logs unknown callers as customers after collecting their name.
-- **Real-time Dashboard** — Android app shows live call sessions, full conversation transcripts with chat bubbles, caller contacts, and today's call stats.
-- **After Hours Handling** — Collects caller name and callback number when business is closed. Respects per-day business hour schedules.
-- **Multi-tenant Architecture** — Each business gets their own Twilio number, provisioned automatically via API. Phone number → userId mapping in Firestore.
-- **WebRTC VAD** — Google's WebRTC Voice Activity Detection (same algorithm used in Google Meet) with aggressiveness level 3 for accurate speech/silence detection on phone calls.
-- **Automatic Business Setup** — Scrapes Google Business Profile and website using Jina.ai + Gemini to auto-fill business context. No manual data entry needed.
+- **Voice Cloning** — Owner records 35–60s audio. ElevenLabs clones their voice per language. Every caller hears the owner, not a robot.
+- **Multilingual** — English, Kannada, Hindi, Tamil. Original and phonetic scripts per language for accurate pronunciation.
+- **Real-time Call Sessions** — Firestore snapshot listeners stream live call data. Full transcript (caller + AI per exchange) stored per session. Categories: CUSTOMER, SPAM, BLOCKED, AFTER_HOURS.
+- **Smart Contact Management** — Reads device contacts via ContentProvider. VIP/Customer/Blocked status synced to Firestore. Returning callers greeted by name.
+- **Analytics Dashboard** — Premium feature: peak hours bar chart, 7-day call trend, language distribution, common questions via backend NLP.
+- **Subscription Billing** — Razorpay order creation and signature verification. Firestore `subscriptions/{uid}` gates Premium features.
+- **Business Auto-fill** — Backend scrapes Google Business Profile or website URL to pre-fill business context and 5 Q&A pairs.
+- **FCM Push Notifications** — CALL_STARTED (high priority) and CALL_ENDED (auto-cancel) channels with token auto-refresh.
+- **Firebase Phone Auth** — SMS OTP with session persistence and auto-login on restart.
+- **Test Call FAB** — One-tap to dial the live Twilio number and verify the full AI pipeline end-to-end.
 
 ---
-
-## Performance Benchmarks
-
-Measured on real phone calls (Twilio → Railway → ElevenLabs/Gemini):
-
-| Component | Latency |
-|---|---|
-| STT (ElevenLabs Scribe v1) | ~490ms avg |
-| LLM (Gemini 2.5 Flash) | ~1050ms avg |
-| TTS (ElevenLabs Flash v2.5) | ~530ms avg |
-| **Total response time** | **~1.1s avg** |
-
-Sub-second responses on most turns. First response slightly higher (~2.2s) due to Firestore context loading.
-
----
-
-## System Architecture
-
-![UrVoice Architecture](docs/urvoice_architecture_diagram.svg)
 
 ## Tech Stack
 
-### Android App
 | Layer | Technology |
 |---|---|
 | Language | Kotlin |
 | UI | Jetpack Compose + Material 3 |
-| Architecture | MVVM |
+| Architecture | MVVM with StateFlow |
 | Auth | Firebase Phone Auth (OTP) |
-| Database | Firestore (real-time listeners) |
+| Database | Firestore (real-time snapshot listeners) |
 | Push | Firebase Cloud Messaging |
-| HTTP | Retrofit 2 + OkHttp |
+| HTTP | Retrofit 2 + OkHttp (120s timeout for voice cloning) |
+| Billing | Razorpay Checkout SDK |
 | Min SDK | Android 8.0 (API 26) |
+| Backend | Railway-hosted FastAPI — [UrVoice backend](https://github.com/sharansergio-creator/UrVoice) |
 
-### Backend
-| Layer | Technology |
-|---|---|
-| Framework | FastAPI (Python) |
-| Hosting | Railway |
-| Telephony | Twilio Media Streams (WebSocket) |
-| STT | ElevenLabs Scribe v1 |
-| LLM | Google Gemini 2.5 Flash |
-| TTS | ElevenLabs Flash v2.5 + Multilingual v2 |
-| Voice Cloning | ElevenLabs Instant Voice Cloning |
-| VAD | WebRTC VAD (aggressiveness level 3) |
-| Audio | audioop G.711 mulaw, miniaudio MP3 decode |
-| Database | Firestore (asia-south1) |
-| Web Scraping | Jina.ai Reader + BeautifulSoup + httpx |
+---
+
+## Architecture
+
+MVVM with reactive StateFlow. Every screen has a dedicated ViewModel exposing `StateFlow<UiState>` consumed via `collectAsState()`. Sealed UI state classes (`Idle / Loading / Success / Error`) enforce type-safe state transitions. Composables are intentionally thin — all business logic lives in ViewModels.
+
+No local Room database. Firestore is the single source of truth with real-time snapshot listeners. Navigation is enum-based (`Screen` enum + `mutableStateOf`) handled in `MainActivity`.
+MainActivity (enum router)
+├── SplashScreen
+├── OnboardingScreen → OnboardingViewModel
+├── BusinessSetupScreen → BusinessSetupViewModel
+└── DashboardScreen (5 tabs) → DashboardViewModel
+├── AnalyticsScreen → AnalyticsViewModel
+├── ContactsScreen → ContactsViewModel
+├── AiVoiceSetupScreen → AiVoiceSetupViewModel
+├── BillingScreen → BillingViewModel
+└── CallHandlingScreen
 
 ---
 
 ## Firestore Schema
-
-```
 users/{uid}
-  fcmToken, twilioNumber
-  voiceClones: { en, kn, hi, ta }   ← per-language ElevenLabs voice IDs
-
+fcmToken, twilioNumber
+voiceClones: { en, kn, hi, ta }
 business_context/{uid}
-  businessName, businessType, location, phone, email
-  about, services, pricing, accommodations, activities
-  businessHours: [{day, enabled, openTime, closeTime}]
-  qaAnswers: { 5 custom Q&A pairs }
-
+businessName, businessType, location, phone, email
+about, services, pricing, accommodations
+businessHours: [{day, enabled, openTime, closeTime}]
+qaAnswers: { 5 custom Q&A pairs }
 call_sessions/{sessionId}
-  userId, callerNumber, callerName, category
-  startTime, endTime, status, totalExchanges
-  exchanges: [{transcript, aiResponse, language, timestamp}]
-
+userId, callerNumber, callerName, category
+startTime, endTime, status, totalExchanges
+exchanges: [{transcript, aiResponse, language, timestamp}]
 contact_permissions/{uid}/contacts/{phoneNumber}
-  name, type (VIP/CUSTOMER/BLOCKED/UNKNOWN)
-  firstCall, lastCall, totalCalls
-
-call_settings/{uid}
-  answerMode (ALWAYS/BUSY_ONLY/SCHEDULED/NEVER)
-  noAnswerDelaySeconds, scheduleStartHour, scheduleEndHour
-
-phone_mappings/{twilioNumber}
-  userId, assignedAt
-```
-
----
-
-## Multi-tenancy Design
-
-Each business gets their own dedicated Twilio number via `/provision-number`:
-
-1. Backend calls Twilio Numbers API → searches available numbers → purchases
-2. Sets webhook URLs automatically (`/incoming-call`, `/call-status`)
-3. Writes `phone_mappings/{number} → userId` to Firestore
-4. On every incoming call, `To` field → Firestore lookup → userId → business context
-
-Zero hardcoded user IDs in production code.
-
----
-
-## Voice Cloning Flow
-
-1. Owner opens AI Voice tab in Android app
-2. Selects language (English / Kannada / Hindi / Tamil)
-3. Chooses script: **Original** (native script) or **Phonetic** (English letters)
-4. Records 45-second voice sample (MediaRecorder → M4A)
-5. Backend uploads to ElevenLabs `/v1/voices/add`
-6. Voice ID stored in `users/{uid}/voiceClones/{language}`
-7. TTS uses language-matched clone → falls back to English clone with `eleven_multilingual_v2`
-
----
-
-## Audio Pipeline Technical Details
-
-Phone calls use G.711 mulaw encoding at 8000Hz — a 64kbps telephony standard. UrVoice handles the full codec pipeline:
-
-**Inbound (caller → AI):**
-- Twilio sends base64-encoded mulaw chunks via WebSocket
-- `audioop.ulaw2lin()` decodes to 16-bit PCM
-- WebRTC VAD processes 20ms frames, triggers STT after 600ms silence
-- `mulaw_to_wav()` builds WAV file for STT
-
-**Outbound (AI → caller):**
-- ElevenLabs TTS returns MP3 (`mp3_44100_128`)
-- ID3 tag stripped, `miniaudio.decode()` converts to 8kHz PCM
-- `audioop.lin2ulaw()` encodes to G.711 mulaw
-- Base64-encoded and sent as Twilio `media` event
-
-**Why WebRTC VAD over RMS threshold:**
-Simple RMS threshold detects loudness — it fires on background noise. WebRTC VAD (originally built for Google Meet/Chrome) analyzes frequency patterns of human speech. At aggressiveness level 3, it filters nearly all non-speech audio, reducing false STT calls and hallucinations.
-
----
-
-## Android App Screens
-
-| Screen | Description |
-|---|---|
-| OnboardingScreen | Phone OTP auth, Indian numbers only |
-| BusinessSetupScreen | Business profile, hours, GBP URL, auto-fetch, 5 custom Q&A |
-| AiVoiceSetupScreen | Premium voice clone setup — 4 languages, original/phonetic script, biometric-style recording flow |
-| DashboardScreen | Today's stats, call session list, conversation thread bottom sheet, Test Call FAB |
-| ContactsScreen | All/VIP/Customer/Blocked tabs, phone book picker, long-press category management |
-| SettingsScreen | Edit profile, call handling, sign out |
-| CallHandlingScreen | Answer mode, delay slider, GSM forwarding dial codes |
+name, type (VIP/CUSTOMER/BLOCKED/UNKNOWN)
+firstCall, lastCall, totalCalls
+subscriptions/{uid}
+plan (FREE/BASIC/PREMIUM), validUntil, razorpayOrderId
 
 ---
 
 ## Getting Started
 
-### Backend
 ```bash
-git clone https://github.com/sharansergio-creator/UrVoice-backend
-cd UrVoice-backend
-pip install -r requirements.txt
-# Copy .env.example to .env and fill in keys
-uvicorn main:app --reload
-```
-
-### Android
-```bash
-git clone https://github.com/sharansergio-creator/UrVoice
+git clone https://github.com/sharansergio-creator/UrVoice-android
 # Open in Android Studio
-# Add google-services.json from Firebase Console
+# Add google-services.json from your Firebase Console
+# Add to gradle.properties:
+#   RAZORPAY_KEY_ID=your_key
+#   GEMINI_API_KEY=your_key
 # Run on device (min Android 8.0)
 ```
 
-### Environment Variables
-```
-TWILIO_ACCOUNT_SID
-TWILIO_AUTH_TOKEN
-TWILIO_PHONE_NUMBER
-ELEVENLABS_API_KEY
-GEMINI_API_KEY
-SARVAM_API_KEY
-FIREBASE_CREDENTIALS    # Full service account JSON
-```
+> Physical device recommended for FCM push notifications and audio recording.
 
 ---
 
-## Project Structure
+## Design
 
-```
-UrVoice-backend/
-├── main.py              # FastAPI app — all endpoints + WebSocket handler
-├── requirements.txt
-├── nixpacks.toml        # Railway build config (ffmpeg)
-└── Procfile
-
-UrVoice/ (Android)
-├── app/src/main/java/com/urvoice/app/
-│   ├── ui/
-│   │   ├── onboarding/      # Phone OTP auth
-│   │   ├── business/        # Business profile setup + auto-fetch
-│   │   ├── voice/           # AI Voice clone setup (4 languages)
-│   │   ├── dashboard/       # Call history, stats, conversation view
-│   │   ├── contacts/        # Caller management
-│   │   └── settings/        # Call handling config
-│   ├── network/             # Retrofit API service
-│   └── service/             # FCM messaging service
-```
-
----
-
-## Planned Features
-
-- [ ] Razorpay subscription billing (Basic ₹999/month, Premium ₹2499/month)
-- [ ] Call analytics dashboard (peak hours, common queries via Gemini)
-- [ ] Native Kannada voice cloning (pending ElevenLabs Professional Voice Cloning support)
-- [ ] WhatsApp follow-up after missed calls
-- [ ] Custom LLM selection (Gemini / Claude / GPT per business)
+Dark-only theme. Custom color scheme: `#6C63FF` purple primary, `#0A0A0A` background, `#FFD700` gold for Premium badge. All screens built with Jetpack Compose + Material 3.
 
 ---
 
 ## Built By
 
-**Sharan** — BCA (Data Science), Srinivas Institute of Technology, Mangalore.
+**Sharan S** — BCA (Data Science), Srinivas Institute of Technology, Mangalore
 
 [GitHub](https://github.com/sharansergio-creator) · [LinkedIn](https://linkedin.com/in/sharansergio)
-
----
-
-*UrVoice is currently in beta. Live demo available at +1 (620) 659-6566 — ask for a room booking at Vishmaa Resorts.*
